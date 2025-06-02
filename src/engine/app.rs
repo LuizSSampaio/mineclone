@@ -38,14 +38,31 @@ impl ApplicationHandler for App {
         let state = self.renderer_state.as_mut().unwrap();
         let window = self.window.as_ref().unwrap();
 
-        if window_id == window.id() {
+        if window_id == window.id() && !state.input(&event) {
             match event {
                 WindowEvent::CloseRequested => {
                     event_loop.exit();
                 }
-                WindowEvent::Resized(physical_size) => {}
+                WindowEvent::Resized(physical_size) => {
+                    state.resize(physical_size);
+                }
                 WindowEvent::RedrawRequested => {
                     window.request_redraw();
+
+                    match state.render() {
+                        Ok(_) => {}
+                        Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                            let new_size = state.size;
+                            state.resize(new_size);
+                        }
+                        Err(wgpu::SurfaceError::OutOfMemory | wgpu::SurfaceError::Other) => {
+                            log::error!("OutOfMemory");
+                            event_loop.exit();
+                        }
+                        Err(wgpu::SurfaceError::Timeout) => {
+                            log::warn!("Surface timeout");
+                        }
+                    }
                 }
                 _ => {}
             }
