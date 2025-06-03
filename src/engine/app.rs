@@ -38,6 +38,7 @@ impl ApplicationHandler for App {
         let state = self.renderer_state.as_mut().unwrap();
         let window = self.window.as_ref().unwrap();
 
+        state.update();
         if window_id == window.id() && !state.input(&event) {
             match event {
                 WindowEvent::CloseRequested => {
