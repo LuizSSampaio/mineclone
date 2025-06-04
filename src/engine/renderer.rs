@@ -1,18 +1,20 @@
 use std::sync::Arc;
 
 use wgpu::{
-    Adapter, Device, Instance, Queue, RenderPipeline, ShaderModule, Surface, SurfaceCapabilities,
-    SurfaceConfiguration,
+    Adapter, BindGroupLayout, Device, Instance, Queue, RenderPipeline, ShaderModule, Surface,
+    SurfaceCapabilities, SurfaceConfiguration,
 };
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
 pub struct RendererState {
     surface: wgpu::Surface<'static>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
+
+    pub diffuse_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl RendererState {
@@ -27,6 +29,8 @@ impl RendererState {
         let shader_module = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
         let render_pipeline = Self::create_render_pipeline(&device, &config, shader_module);
 
+        let diffuse_bind_group_layout = Self::create_diffuse_bind_group_layout(&device);
+
         Self {
             surface,
             device,
@@ -34,6 +38,7 @@ impl RendererState {
             config,
             size,
             render_pipeline,
+            diffuse_bind_group_layout,
         }
     }
 
@@ -197,6 +202,30 @@ impl RendererState {
             }),
             multiview: None,
             cache: None,
+        })
+    }
+
+    fn create_diffuse_bind_group_layout(device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Texture Bind Group Layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
         })
     }
 }
