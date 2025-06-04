@@ -1,13 +1,13 @@
 use image::GenericImageView;
 
 pub struct Texture {
-    pub texture: wgpu::Texture,
-    pub view: wgpu::TextureView,
-    pub sampler: wgpu::Sampler,
+    pub(in crate::engine) texture: wgpu::Texture,
+    pub(in crate::engine) view: wgpu::TextureView,
+    pub(in crate::engine) sampler: wgpu::Sampler,
 }
 
 impl Texture {
-    pub fn from_bytes(
+    pub(in crate::engine) fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         bytes: &[u8],
@@ -17,7 +17,7 @@ impl Texture {
         Self::from_image(device, queue, &image, Some(label))
     }
 
-    pub fn from_image(
+    pub(in crate::engine) fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         image: &image::DynamicImage,

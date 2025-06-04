@@ -12,7 +12,7 @@ use super::renderer::RendererState;
 
 #[derive(Default)]
 pub struct App {
-    renderer_state: Option<RendererState>,
+    pub renderer_state: Option<RendererState>,
     window: Option<Arc<Window>>,
 }
 
