@@ -7,11 +7,11 @@ mod renderer;
 pub mod resources;
 pub mod texture;
 
-pub struct Engine {
+pub struct Game {
     app: app::App,
 }
 
-impl Engine {
+impl Game {
     pub fn new() -> Self {
         Self {
             app: App::default(),

@@ -3,7 +3,8 @@ mod engine;
 use anyhow::Ok;
 
 fn main() -> anyhow::Result<()> {
-    engine::Engine::new().run()?;
+    let mut game = engine::Game::new();
 
+    game.run()?;
     Ok(())
 }
