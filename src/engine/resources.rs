@@ -4,7 +4,7 @@ use anyhow::Ok;
 use tokio::io::BufReader;
 use wgpu::util::DeviceExt;
 
-use super::{Engine, model, texture};
+use super::{Game, model, texture};
 
 fn load_string(file_name: &str) -> anyhow::Result<String> {
     let path = std::path::Path::new(env!("OUT_DIR"))
@@ -24,7 +24,7 @@ fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-impl Engine {
+impl Game {
     pub fn load_texture(&self, file_name: &str) -> anyhow::Result<texture::Texture> {
         let data = load_binary(file_name)?;
         let render_state = self.app.renderer_state.as_ref().unwrap();
@@ -148,5 +148,65 @@ impl Engine {
             .collect::<Vec<_>>();
 
         Ok(model::Model { meshes, materials })
+    }
+
+    pub fn create_model(
+        &self,
+        vertices: Vec<model::ModelVertex>,
+        indices: Vec<u32>,
+        texture: texture::Texture,
+        label: &str,
+    ) -> anyhow::Result<model::Model> {
+        let device = &self.app.renderer_state.as_ref().unwrap().device;
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(format!("{} Vertex Buffer", label).as_str()),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(format!("{} Index Buffer", label).as_str()),
+            contents: bytemuck::cast_slice(&indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(format!("{} Texture Bind Group", label).as_str()),
+            layout: &self
+                .app
+                .renderer_state
+                .as_ref()
+                .unwrap()
+                .diffuse_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                },
+            ],
+        });
+
+        let material = model::Material {
+            name: format!("{} Material", label),
+            diffuse_texture: texture,
+            bind_group,
+        };
+
+        let mesh = model::Mesh {
+            name: format!("{} Mesh", label),
+            vertex_buffer,
+            index_buffer,
+            num_elements: indices.len() as u32,
+            material: 0,
+        };
+
+        Ok(model::Model {
+            meshes: vec![mesh],
+            materials: vec![material],
+        })
     }
 }
