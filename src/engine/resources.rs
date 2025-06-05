@@ -4,7 +4,7 @@ use anyhow::Ok;
 use tokio::io::BufReader;
 use wgpu::util::DeviceExt;
 
-use super::{Game, model, texture};
+use super::{model, object::Context, texture};
 
 fn load_string(file_name: &str) -> anyhow::Result<String> {
     let path = std::path::Path::new(env!("OUT_DIR"))
@@ -24,11 +24,15 @@ fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-impl Game {
+impl<'a> Context<'a> {
     pub fn load_texture(&self, file_name: &str) -> anyhow::Result<texture::Texture> {
         let data = load_binary(file_name)?;
-        let render_state = self.app.renderer_state.as_ref().unwrap();
-        texture::Texture::from_bytes(&render_state.device, &render_state.queue, &data, file_name)
+        texture::Texture::from_bytes(
+            &self.renderer_state.device,
+            &self.renderer_state.queue,
+            &data,
+            file_name,
+        )
     }
 
     pub async fn load_model(&self, file_name: &str) -> anyhow::Result<model::Model> {
@@ -53,31 +57,23 @@ impl Game {
         let mut materials = Vec::new();
         for material in obj_materials? {
             let diffuse_texture = self.load_texture(&material.diffuse_texture.unwrap())?;
-            let bind_group = self
-                .app
-                .renderer_state
-                .as_ref()
-                .unwrap()
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self
-                        .app
-                        .renderer_state
-                        .as_ref()
-                        .unwrap()
-                        .diffuse_bind_group_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                        },
-                    ],
-                });
+            let bind_group =
+                self.renderer_state
+                    .device
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: None,
+                        layout: &self.renderer_state.diffuse_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                            },
+                        ],
+                    });
 
             materials.push(model::Material {
                 name: material.name,
@@ -125,7 +121,7 @@ impl Game {
                     })
                     .collect::<Vec<_>>();
 
-                let device = &self.app.renderer_state.as_ref().unwrap().device;
+                let device = &self.renderer_state.device;
                 let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some(&format!("{:?} Vertex Buffer", file_name)),
                     contents: bytemuck::cast_slice(&vertices),
@@ -152,12 +148,12 @@ impl Game {
 
     pub fn create_model(
         &self,
-        vertices: Vec<model::ModelVertex>,
-        indices: Vec<u32>,
+        vertices: &[model::ModelVertex],
+        indices: &[u32],
         texture: texture::Texture,
         label: &str,
     ) -> anyhow::Result<model::Model> {
-        let device = &self.app.renderer_state.as_ref().unwrap().device;
+        let device = &self.renderer_state.device;
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(format!("{} Vertex Buffer", label).as_str()),
@@ -172,12 +168,7 @@ impl Game {
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(format!("{} Texture Bind Group", label).as_str()),
-            layout: &self
-                .app
-                .renderer_state
-                .as_ref()
-                .unwrap()
-                .diffuse_bind_group_layout,
+            layout: &self.renderer_state.diffuse_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,

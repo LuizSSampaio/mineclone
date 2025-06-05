@@ -1,5 +1,6 @@
 use image::GenericImageView;
 
+#[derive(Clone)]
 pub struct Texture {
     pub(in crate::engine) texture: wgpu::Texture,
     pub(in crate::engine) view: wgpu::TextureView,

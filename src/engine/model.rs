@@ -8,7 +8,7 @@ pub(in crate::engine) trait Vertex {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub(in crate::engine) struct ModelVertex {
+pub struct ModelVertex {
     pub position: [f32; 3],
     pub text_coords: [f32; 2],
     pub normal: [f32; 3],
@@ -42,12 +42,14 @@ impl Vertex for ModelVertex {
     }
 }
 
+#[derive(Clone)]
 pub struct Material {
     pub name: String,
     pub diffuse_texture: texture::Texture,
     pub(in crate::engine) bind_group: wgpu::BindGroup,
 }
 
+#[derive(Clone)]
 pub struct Mesh {
     pub name: String,
     pub(in crate::engine) vertex_buffer: wgpu::Buffer,
@@ -56,6 +58,7 @@ pub struct Mesh {
     pub material: usize,
 }
 
+#[derive(Clone)]
 pub struct Model {
     pub meshes: Vec<Mesh>,
     pub materials: Vec<Material>,

@@ -6,6 +6,8 @@ use wgpu::{
 };
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
+use super::model::{self, DrawModel, ModelVertex, Vertex};
+
 pub struct RendererState {
     surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
@@ -15,6 +17,8 @@ pub struct RendererState {
     render_pipeline: wgpu::RenderPipeline,
 
     pub diffuse_bind_group_layout: wgpu::BindGroupLayout,
+
+    pub models: Vec<model::Model>,
 }
 
 impl RendererState {
@@ -27,9 +31,13 @@ impl RendererState {
         let surface_caps = surface.get_capabilities(&adapter);
         let config = Self::create_surface_config(size, surface_caps);
         let shader_module = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
-        let render_pipeline = Self::create_render_pipeline(&device, &config, shader_module);
-
         let diffuse_bind_group_layout = Self::create_diffuse_bind_group_layout(&device);
+        let render_pipeline = Self::create_render_pipeline(
+            &device,
+            &config,
+            shader_module,
+            &diffuse_bind_group_layout,
+        );
 
         Self {
             surface,
@@ -39,6 +47,7 @@ impl RendererState {
             size,
             render_pipeline,
             diffuse_bind_group_layout,
+            models: vec![],
         }
     }
 
@@ -53,11 +62,10 @@ impl RendererState {
         self.surface.configure(&self.device, &self.config);
     }
 
+    #[allow(unused_variables)]
     pub fn input(&mut self, event: &WindowEvent) -> bool {
         false
     }
-
-    pub fn update(&mut self) {}
 
     pub fn render(&mut self) -> anyhow::Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
@@ -92,7 +100,9 @@ impl RendererState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            for model in &self.models {
+                render_pass.draw_model(model);
+            }
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -159,10 +169,11 @@ impl RendererState {
         device: &Device,
         config: &SurfaceConfiguration,
         shader_module: ShaderModule,
+        diffuse_bind_group_layout: &BindGroupLayout,
     ) -> RenderPipeline {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[diffuse_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -173,7 +184,7 @@ impl RendererState {
                 module: &shader_module,
                 entry_point: Some("vs_main"),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
-                buffers: &[],
+                buffers: &[ModelVertex::desc()],
             },
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
