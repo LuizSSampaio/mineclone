@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use winit::{
     application::ApplicationHandler,
@@ -16,15 +16,19 @@ use super::{
 
 #[derive(Default)]
 pub struct App {
-    pub renderer_state: Option<RendererState>,
+    renderer_state: Option<RendererState>,
     window: Option<Arc<Window>>,
 
     objects: Vec<Box<dyn Object>>,
+
+    last_render_time: Option<Instant>,
 }
 
 impl App {
     pub fn run(&mut self) -> anyhow::Result<()> {
         let event_loop = EventLoop::new().unwrap();
+
+        self.last_render_time = Some(Instant::now());
 
         event_loop.set_control_flow(event_loop::ControlFlow::Poll);
         event_loop.run_app(self)?;
@@ -53,6 +57,7 @@ impl ApplicationHandler for App {
 
         let mut ctx = Context {
             renderer_state: self.renderer_state.as_mut().unwrap(),
+            window: self.window.as_mut().unwrap(),
         };
 
         for i in 0..self.objects.len() {
@@ -68,31 +73,34 @@ impl ApplicationHandler for App {
     ) {
         let mut ctx = Context {
             renderer_state: self.renderer_state.as_mut().unwrap(),
+            window: self.window.as_mut().unwrap(),
         };
 
+        let now = Instant::now();
+        let delta = (now - self.last_render_time.unwrap()).as_secs_f32();
+        self.last_render_time = Some(now);
+
         for i in 0..self.objects.len() {
-            self.objects[i].update(&mut ctx);
+            self.objects[i].update(&mut ctx, delta);
         }
 
-        let state = self.renderer_state.as_mut().unwrap();
-        let window = self.window.as_ref().unwrap();
-
-        if window_id == window.id() && !state.input(&event) {
+        ctx.renderer_state.update();
+        if window_id == ctx.window.id() && !ctx.renderer_state.input(&event) {
             match event {
                 WindowEvent::CloseRequested => {
                     event_loop.exit();
                 }
                 WindowEvent::Resized(physical_size) => {
-                    state.resize(physical_size);
+                    ctx.renderer_state.resize(physical_size);
                 }
                 WindowEvent::RedrawRequested => {
-                    window.request_redraw();
+                    ctx.window.request_redraw();
 
-                    match state.render() {
+                    match ctx.renderer_state.render() {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                            let new_size = state.size;
-                            state.resize(new_size);
+                            let new_size = ctx.renderer_state.size;
+                            ctx.renderer_state.resize(new_size);
                         }
                         Err(wgpu::SurfaceError::OutOfMemory | wgpu::SurfaceError::Other) => {
                             log::error!("OutOfMemory");
