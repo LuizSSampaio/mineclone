@@ -1,5 +1,6 @@
 pub mod app;
 pub mod camera;
+mod input;
 pub mod model;
 pub mod object;
 mod renderer;

@@ -10,6 +10,7 @@ use winit::{
 use tokio::runtime::Runtime;
 
 use super::{
+    input::Input,
     object::{Context, Object},
     renderer::RendererState,
 };
@@ -18,6 +19,7 @@ use super::{
 pub struct App {
     renderer_state: Option<RendererState>,
     window: Option<Arc<Window>>,
+    input: Input,
 
     objects: Vec<Box<dyn Object>>,
 
@@ -58,6 +60,7 @@ impl ApplicationHandler for App {
         let mut ctx = Context {
             renderer_state: self.renderer_state.as_mut().unwrap(),
             window: self.window.as_mut().unwrap(),
+            input: &mut self.input,
         };
 
         for i in 0..self.objects.len() {
@@ -74,6 +77,7 @@ impl ApplicationHandler for App {
         let mut ctx = Context {
             renderer_state: self.renderer_state.as_mut().unwrap(),
             window: self.window.as_mut().unwrap(),
+            input: &mut self.input,
         };
 
         let now = Instant::now();
@@ -85,7 +89,7 @@ impl ApplicationHandler for App {
         }
 
         ctx.renderer_state.update();
-        if window_id == ctx.window.id() && !ctx.renderer_state.input(&event) {
+        if window_id == ctx.window.id() && !ctx.input.handle_input(&event) {
             match event {
                 WindowEvent::CloseRequested => {
                     event_loop.exit();

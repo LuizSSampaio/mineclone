@@ -1,5 +1,3 @@
-use std::f32::consts::FRAC_PI_2;
-
 use cgmath::{Matrix4, Point3, Rad, SquareMatrix, Vector3, perspective};
 
 pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
@@ -8,8 +6,6 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_co
     cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
     cgmath::Vector4::new(0.0, 0.0, 0.5, 1.0),
 );
-
-const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 pub struct Camera {
     pub position: Point3<f32>,
