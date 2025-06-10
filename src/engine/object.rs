@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use anyhow::Ok;
 use winit::window::Window;
 
-use super::{input::Input, model, renderer::RendererState};
+use super::{camera::Camera, input::Input, model, renderer::RendererState};
 
 pub struct Context<'a> {
     pub(in crate::engine) renderer_state: &'a mut RendererState,
@@ -16,11 +17,15 @@ impl<'a> Context<'a> {
 
         Ok(())
     }
+
+    pub fn update_camera(&mut self, camera: &Camera) {
+        self.renderer_state.camera = camera.to_owned();
+    }
 }
 
 #[allow(unused)]
 pub trait Object {
-    fn start(&self, ctx: &mut Context) {}
-    fn update(&self, ctx: &mut Context, delta: f32) {}
-    fn destroy(&self, ctx: &mut Context) {}
+    fn start(&mut self, ctx: &mut Context) {}
+    fn update(&mut self, ctx: &mut Context, delta: f32) {}
+    fn destroy(&mut self, ctx: &mut Context) {}
 }

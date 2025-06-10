@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use winit::{
     application::ApplicationHandler,
-    event::WindowEvent,
+    event::{DeviceEvent, WindowEvent},
     event_loop::{self, EventLoop},
     window::{Window, WindowAttributes},
 };
@@ -66,6 +66,13 @@ impl ApplicationHandler for App {
         for i in 0..self.objects.len() {
             self.objects[i].start(&mut ctx);
         }
+
+        let _ = self
+            .window
+            .as_ref()
+            .unwrap()
+            .set_cursor_grab(winit::window::CursorGrabMode::Locked);
+        self.window.as_ref().unwrap().set_cursor_visible(false);
     }
 
     fn window_event(
@@ -117,6 +124,18 @@ impl ApplicationHandler for App {
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &event_loop::ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        if let DeviceEvent::MouseMotion { delta } = event {
+            self.input.mouse_delta.0 += delta.0;
+            self.input.mouse_delta.1 += delta.1;
         }
     }
 }

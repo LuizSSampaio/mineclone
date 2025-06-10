@@ -4,7 +4,7 @@ use wgpu::{
     Adapter, BindGroup, BindGroupLayout, Buffer, Device, Instance, Queue, RenderPipeline,
     ShaderModule, Surface, SurfaceCapabilities, SurfaceConfiguration, util::DeviceExt,
 };
-use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
+use winit::{dpi::PhysicalSize, window::Window};
 
 use super::{
     camera::{self, CameraUniform},
@@ -19,7 +19,7 @@ pub struct RendererState {
     pub size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
 
-    camera: camera::Camera,
+    pub camera: camera::Camera,
     projection: camera::Projection,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -86,11 +86,6 @@ impl RendererState {
         self.config.height = new_size.height;
         self.surface.configure(&self.device, &self.config);
         self.projection.resize(new_size.width, new_size.height);
-    }
-
-    #[allow(unused_variables)]
-    pub fn input(&mut self, event: &WindowEvent) -> bool {
-        false
     }
 
     pub fn update(&mut self) {

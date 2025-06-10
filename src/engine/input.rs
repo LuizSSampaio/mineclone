@@ -8,6 +8,7 @@ use winit::{
 #[derive(Default)]
 pub struct Input {
     keys_pressed: HashSet<PhysicalKey>,
+    pub mouse_delta: (f64, f64),
 }
 
 impl Input {
@@ -36,5 +37,9 @@ impl Input {
 
     pub fn is_key_pressed(&self, keycode: KeyCode) -> bool {
         self.keys_pressed.contains(&PhysicalKey::Code(keycode))
+    }
+
+    pub fn reset_mouse_delta(&mut self) {
+        self.mouse_delta = (0.0, 0.0);
     }
 }
