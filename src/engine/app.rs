@@ -67,11 +67,19 @@ impl ApplicationHandler for App {
             self.objects[i].start(&mut ctx);
         }
 
-        let _ = self
+        if ctx
             .window
-            .as_ref()
-            .unwrap()
-            .set_cursor_grab(winit::window::CursorGrabMode::Locked);
+            .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+            .is_err()
+            && ctx
+                .window
+                .set_cursor_grab(winit::window::CursorGrabMode::Confined)
+                .is_err()
+        {
+            let _ = ctx
+                .window
+                .set_cursor_grab(winit::window::CursorGrabMode::None);
+        }
         self.window.as_ref().unwrap().set_cursor_visible(false);
     }
 
