@@ -25,13 +25,34 @@ fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
 }
 
 impl<'a> Context<'a> {
-    pub fn load_texture(&self, file_name: &str) -> anyhow::Result<texture::Texture> {
-        let data = load_binary(file_name)?;
-        texture::Texture::from_bytes(
+    pub fn load_texture_array(&self, file_names: &[&str]) -> anyhow::Result<texture::Texture> {
+        let mut images = Vec::new();
+
+        for file_name in file_names {
+            let data = load_binary(file_name)?;
+            let img = image::load_from_memory(&data)?;
+            images.push(img);
+        }
+
+        let (width, height) = (images[0].width(), images[0].height());
+        for (i, img) in images.iter().enumerate() {
+            if img.width() != width || img.height() != height {
+                return Err(anyhow::anyhow!(
+                    "Texture {} has different dimensions ({}, {}) than first texture ({}, {})",
+                    file_names[i],
+                    img.width(),
+                    img.height(),
+                    width,
+                    height
+                ));
+            }
+        }
+
+        texture::Texture::from_image_array(
             &self.renderer_state.device,
             &self.renderer_state.queue,
-            &data,
-            file_name,
+            &images,
+            Some(&format!("texture_array_{}", file_names.join("_"))),
         )
     }
 
@@ -56,7 +77,7 @@ impl<'a> Context<'a> {
 
         let mut materials = Vec::new();
         for material in obj_materials? {
-            let diffuse_texture = self.load_texture(&material.diffuse_texture.unwrap())?;
+            let diffuse_texture = self.load_texture_array(&[&material.diffuse_texture.unwrap()])?;
             let bind_group =
                 self.renderer_state
                     .device
@@ -99,6 +120,7 @@ impl<'a> Context<'a> {
                                     1.0 - m.mesh.texcoords[i * 2 + 1],
                                 ],
                                 normal: [0.0, 0.0, 0.0],
+                                tex_index: 0,
                             }
                         } else {
                             model::ModelVertex {
@@ -116,6 +138,7 @@ impl<'a> Context<'a> {
                                     m.mesh.normals[i * 3 + 1],
                                     m.mesh.normals[i * 3 + 2],
                                 ],
+                                tex_index: 0,
                             }
                         }
                     })
@@ -157,12 +180,12 @@ impl<'a> Context<'a> {
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(format!("{} Vertex Buffer", label).as_str()),
-            contents: bytemuck::cast_slice(&vertices),
+            contents: bytemuck::cast_slice(vertices),
             usage: wgpu::BufferUsages::VERTEX,
         });
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(format!("{} Index Buffer", label).as_str()),
-            contents: bytemuck::cast_slice(&indices),
+            contents: bytemuck::cast_slice(indices),
             usage: wgpu::BufferUsages::INDEX,
         });
 

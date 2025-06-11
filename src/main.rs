@@ -23,7 +23,20 @@ struct GrassBlock {}
 
 impl Object for GrassBlock {
     fn start(&mut self, ctx: &mut Context) {
-        let grass = ctx.create_block("grass_block_side.png", "grass").unwrap();
+        let grass = ctx
+            .create_block(
+                &["grass_block_top.png", "grass_block_side.png", "dirt.png"],
+                &blocks::BlockFaceConfig {
+                    front: 1,
+                    back: 1,
+                    top: 0,
+                    bottom: 2,
+                    right: 1,
+                    left: 1,
+                },
+                "grass",
+            )
+            .unwrap();
         let _ = ctx.spawn_model(&grass);
     }
 }
