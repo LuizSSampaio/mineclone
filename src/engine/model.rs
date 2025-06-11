@@ -1,7 +1,5 @@
 use std::ops::Range;
 
-use super::texture;
-
 pub(in crate::engine) trait Vertex {
     fn desc() -> wgpu::VertexBufferLayout<'static>;
 }
@@ -50,14 +48,11 @@ impl Vertex for ModelVertex {
 
 #[derive(Clone)]
 pub struct Material {
-    pub name: String,
-    pub diffuse_texture: texture::Texture,
     pub(in crate::engine) bind_group: wgpu::BindGroup,
 }
 
 #[derive(Clone)]
 pub struct Mesh {
-    pub name: String,
     pub(in crate::engine) vertex_buffer: wgpu::Buffer,
     pub(in crate::engine) index_buffer: wgpu::Buffer,
     pub(in crate::engine) num_elements: u32,
@@ -71,12 +66,6 @@ pub struct Model {
 }
 
 pub(in crate::engine) trait DrawModel<'a> {
-    fn draw_mesh(
-        &mut self,
-        mesh: &'a Mesh,
-        material: &'a Material,
-        camera_bind_group: &'a wgpu::BindGroup,
-    );
     fn draw_mesh_instanced(
         &mut self,
         mesh: &'a Mesh,
@@ -97,15 +86,6 @@ impl<'a, 'b> DrawModel<'b> for wgpu::RenderPass<'a>
 where
     'b: 'a,
 {
-    fn draw_mesh(
-        &mut self,
-        mesh: &'b Mesh,
-        material: &'b Material,
-        camera_bind_group: &'b wgpu::BindGroup,
-    ) {
-        self.draw_mesh_instanced(mesh, material, camera_bind_group, 0..1);
-    }
-
     fn draw_mesh_instanced(
         &mut self,
         mesh: &'b Mesh,

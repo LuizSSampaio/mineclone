@@ -1,13 +1,12 @@
 use std::{sync::Arc, time::Instant};
 
+use pollster::FutureExt;
 use winit::{
     application::ApplicationHandler,
     event::{DeviceEvent, WindowEvent},
     event_loop::{self, EventLoop},
     window::{Window, WindowAttributes},
 };
-
-use tokio::runtime::Runtime;
 
 use super::{
     input::Input,
@@ -47,15 +46,12 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let runtime = Runtime::new().unwrap();
-
         self.window = Some(Arc::new(
             event_loop
                 .create_window(WindowAttributes::default())
                 .unwrap(),
         ));
-        self.renderer_state =
-            Some(runtime.block_on(RendererState::new(self.window.as_ref().unwrap())));
+        self.renderer_state = Some(RendererState::new(self.window.as_ref().unwrap()).block_on());
 
         let mut ctx = Context {
             renderer_state: self.renderer_state.as_mut().unwrap(),

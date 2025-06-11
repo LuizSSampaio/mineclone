@@ -2,7 +2,6 @@ use anyhow::Ok;
 
 #[derive(Clone)]
 pub struct Texture {
-    pub(in crate::engine) texture: wgpu::Texture,
     pub(in crate::engine) view: wgpu::TextureView,
     pub(in crate::engine) sampler: wgpu::Sampler,
 }
@@ -80,10 +79,6 @@ impl Texture {
             ..Default::default()
         });
 
-        Ok(Self {
-            texture,
-            view,
-            sampler,
-        })
+        Ok(Self { view, sampler })
     }
 }
