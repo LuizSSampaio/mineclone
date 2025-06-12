@@ -9,6 +9,7 @@ use winit::{dpi::PhysicalSize, window::Window};
 use super::{
     camera::{self, CameraUniform},
     model::{self, DrawModel, ModelVertex, Vertex},
+    texture,
 };
 
 pub struct RendererState {
@@ -26,6 +27,7 @@ pub struct RendererState {
     camera_bind_group: wgpu::BindGroup,
 
     pub diffuse_bind_group_layout: wgpu::BindGroupLayout,
+    deth_texture: texture::Texture,
 
     pub models: Vec<model::Model>,
 }
@@ -50,6 +52,8 @@ impl RendererState {
             &camera_bind_group_layout,
         );
 
+        let deth_texture = texture::Texture::create_deth_texture(&device, &config, "deth_texture");
+
         let camera = camera::Camera::new((0.0, 1.0, 2.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection =
             camera::Projection::new(config.width, config.height, cgmath::Deg(45.0), 0.1, 100.0);
@@ -72,6 +76,7 @@ impl RendererState {
             camera_buffer,
             camera_bind_group,
             diffuse_bind_group_layout,
+            deth_texture,
             models: vec![],
         }
     }
@@ -85,6 +90,8 @@ impl RendererState {
         self.config.width = new_size.width;
         self.config.height = new_size.height;
         self.surface.configure(&self.device, &self.config);
+        self.deth_texture =
+            texture::Texture::create_deth_texture(&self.device, &self.config, "deth_texture");
         self.projection.resize(new_size.width, new_size.height);
     }
 
@@ -125,7 +132,14 @@ impl RendererState {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.deth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
@@ -227,7 +241,13 @@ impl RendererState {
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: texture::Texture::DETH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,

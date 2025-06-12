@@ -36,12 +36,12 @@ impl<'a> Context<'a> {
             }
         }
 
-        texture::Texture::from_image_array(
+        Ok(texture::Texture::from_image_array(
             &self.renderer_state.device,
             &self.renderer_state.queue,
             &images,
             Some(&format!("texture_array_{}", file_names.join("_"))),
-        )
+        ))
     }
 
     pub fn create_model(
