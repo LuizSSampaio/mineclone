@@ -1,188 +1,122 @@
-use crate::engine::{model, object::Context};
+use cgmath::{Point2, Point3};
 
-pub struct BlockFaceConfig {
-    pub front: u32,
-    pub back: u32,
-    pub top: u32,
-    pub bottom: u32,
-    pub right: u32,
-    pub left: u32,
+use crate::engine::model::{self, ModelVertex};
+
+#[derive(Debug, Clone, Copy)]
+pub enum BlockFace {
+    Front,
+    Back,
+    Left,
+    Right,
+    Top,
+    Bottom,
 }
 
-fn create_block_vertices(face_config: &BlockFaceConfig) -> Vec<model::ModelVertex> {
-    vec![
-        // Front face
-        model::ModelVertex {
-            position: [-0.5, -0.5, 0.5],
-            text_coords: [0.0, 1.0],
-            normal: [0.0, 0.0, 1.0],
-            tex_index: face_config.front,
-        },
-        model::ModelVertex {
-            position: [0.5, -0.5, 0.5],
-            text_coords: [1.0, 1.0],
-            normal: [0.0, 0.0, 1.0],
-            tex_index: face_config.front,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, 0.5],
-            text_coords: [1.0, 0.0],
-            normal: [0.0, 0.0, 1.0],
-            tex_index: face_config.front,
-        },
-        model::ModelVertex {
-            position: [-0.5, 0.5, 0.5],
-            text_coords: [0.0, 0.0],
-            normal: [0.0, 0.0, 1.0],
-            tex_index: face_config.front,
-        },
-        // Back face
-        model::ModelVertex {
-            position: [-0.5, -0.5, -0.5],
-            text_coords: [1.0, 1.0],
-            normal: [0.0, 0.0, -1.0],
-            tex_index: face_config.back,
-        },
-        model::ModelVertex {
-            position: [-0.5, 0.5, -0.5],
-            text_coords: [1.0, 0.0],
-            normal: [0.0, 0.0, -1.0],
-            tex_index: face_config.back,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, -0.5],
-            text_coords: [0.0, 0.0],
-            normal: [0.0, 0.0, -1.0],
-            tex_index: face_config.back,
-        },
-        model::ModelVertex {
-            position: [0.5, -0.5, -0.5],
-            text_coords: [0.0, 1.0],
-            normal: [0.0, 0.0, -1.0],
-            tex_index: face_config.back,
-        },
-        // Top face
-        model::ModelVertex {
-            position: [-0.5, 0.5, -0.5],
-            text_coords: [0.0, 1.0],
-            normal: [0.0, 1.0, 0.0],
-            tex_index: face_config.top,
-        },
-        model::ModelVertex {
-            position: [-0.5, 0.5, 0.5],
-            text_coords: [0.0, 0.0],
-            normal: [0.0, 1.0, 0.0],
-            tex_index: face_config.top,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, 0.5],
-            text_coords: [1.0, 0.0],
-            normal: [0.0, 1.0, 0.0],
-            tex_index: face_config.top,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, -0.5],
-            text_coords: [1.0, 1.0],
-            normal: [0.0, 1.0, 0.0],
-            tex_index: face_config.top,
-        },
-        // Bottom face
-        model::ModelVertex {
-            position: [-0.5, -0.5, -0.5],
-            text_coords: [1.0, 1.0],
-            normal: [0.0, -1.0, 0.0],
-            tex_index: face_config.bottom,
-        },
-        model::ModelVertex {
-            position: [0.5, -0.5, -0.5],
-            text_coords: [0.0, 1.0],
-            normal: [0.0, -1.0, 0.0],
-            tex_index: face_config.bottom,
-        },
-        model::ModelVertex {
-            position: [0.5, -0.5, 0.5],
-            text_coords: [0.0, 0.0],
-            normal: [0.0, -1.0, 0.0],
-            tex_index: face_config.bottom,
-        },
-        model::ModelVertex {
-            position: [-0.5, -0.5, 0.5],
-            text_coords: [1.0, 0.0],
-            normal: [0.0, -1.0, 0.0],
-            tex_index: face_config.bottom,
-        },
-        // Right face
-        model::ModelVertex {
-            position: [0.5, -0.5, -0.5],
-            text_coords: [1.0, 1.0],
-            normal: [1.0, 0.0, 0.0],
-            tex_index: face_config.right,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, -0.5],
-            text_coords: [1.0, 0.0],
-            normal: [1.0, 0.0, 0.0],
-            tex_index: face_config.right,
-        },
-        model::ModelVertex {
-            position: [0.5, 0.5, 0.5],
-            text_coords: [0.0, 0.0],
-            normal: [1.0, 0.0, 0.0],
-            tex_index: face_config.right,
-        },
-        model::ModelVertex {
-            position: [0.5, -0.5, 0.5],
-            text_coords: [0.0, 1.0],
-            normal: [1.0, 0.0, 0.0],
-            tex_index: face_config.right,
-        },
-        // Left face
-        model::ModelVertex {
-            position: [-0.5, -0.5, -0.5],
-            text_coords: [0.0, 1.0],
-            normal: [-1.0, 0.0, 0.0],
-            tex_index: face_config.left,
-        },
-        model::ModelVertex {
-            position: [-0.5, -0.5, 0.5],
-            text_coords: [1.0, 1.0],
-            normal: [-1.0, 0.0, 0.0],
-            tex_index: face_config.left,
-        },
-        model::ModelVertex {
-            position: [-0.5, 0.5, 0.5],
-            text_coords: [1.0, 0.0],
-            normal: [-1.0, 0.0, 0.0],
-            tex_index: face_config.left,
-        },
-        model::ModelVertex {
-            position: [-0.5, 0.5, -0.5],
-            text_coords: [0.0, 0.0],
-            normal: [-1.0, 0.0, 0.0],
-            tex_index: face_config.left,
-        },
-    ]
+impl BlockFace {
+    pub fn get_normal(&self) -> Point3<f32> {
+        match self {
+            BlockFace::Front => Point3::new(0.0, 0.0, 1.0),
+            BlockFace::Back => Point3::new(0.0, 0.0, -1.0),
+            BlockFace::Left => Point3::new(-1.0, 0.0, 0.0),
+            BlockFace::Right => Point3::new(1.0, 0.0, 0.0),
+            BlockFace::Top => Point3::new(0.0, 1.0, 0.0),
+            BlockFace::Bottom => Point3::new(0.0, -1.0, 0.0),
+        }
+    }
+
+    pub fn get_position(&self, position: Point3<f32>) -> [Point3<f32>; 4] {
+        let x = position.x;
+        let y = position.y;
+        let z = position.z;
+
+        match self {
+            BlockFace::Front => [
+                Point3::new(x, y, z + 1.0),
+                Point3::new(x + 1.0, y, z + 1.0),
+                Point3::new(x + 1.0, y + 1.0, z + 1.0),
+                Point3::new(x, y + 1.0, z + 1.0),
+            ],
+            BlockFace::Back => [
+                Point3::new(x + 1.0, y, z),
+                Point3::new(x, y, z),
+                Point3::new(x, y + 1.0, z),
+                Point3::new(x + 1.0, y + 1.0, z),
+            ],
+            BlockFace::Left => [
+                Point3::new(x, y, z),
+                Point3::new(x, y, z + 1.0),
+                Point3::new(x, y + 1.0, z + 1.0),
+                Point3::new(x, y + 1.0, z),
+            ],
+            BlockFace::Right => [
+                Point3::new(x + 1.0, y, z + 1.0),
+                Point3::new(x + 1.0, y, z),
+                Point3::new(x + 1.0, y + 1.0, z),
+                Point3::new(x + 1.0, y + 1.0, z + 1.0),
+            ],
+            BlockFace::Top => [
+                Point3::new(x, y + 1.0, z + 1.0),
+                Point3::new(x + 1.0, y + 1.0, z + 1.0),
+                Point3::new(x + 1.0, y + 1.0, z),
+                Point3::new(x, y + 1.0, z),
+            ],
+            BlockFace::Bottom => [
+                Point3::new(x, y, z),
+                Point3::new(x + 1.0, y, z),
+                Point3::new(x + 1.0, y, z + 1.0),
+                Point3::new(x, y, z + 1.0),
+            ],
+        }
+    }
+
+    pub fn get_tex_coords() -> [Point2<f32>; 4] {
+        [
+            Point2::new(0.0, 1.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.0, 0.0),
+        ]
+    }
 }
 
-const BLOCK_INDICES: &[u32] = &[
-    0, 1, 2, 2, 3, 0, // Front face
-    4, 5, 6, 6, 7, 4, // Back face
-    8, 9, 10, 10, 11, 8, // Top face
-    12, 13, 14, 14, 15, 12, // Bottom face
-    16, 17, 18, 18, 19, 16, // Right face
-    20, 21, 22, 22, 23, 20, // Left face
-];
+pub trait Block {
+    #[allow(unused_variables)]
+    fn get_texture_index(&self, face: BlockFace) -> u32 {
+        0
+    }
 
-impl<'a> Context<'a> {
-    pub fn create_block(
-        &self,
-        texture_paths: &[&str],
-        face_config: &BlockFaceConfig,
-        name: &str,
-    ) -> anyhow::Result<model::Model> {
-        let texture_array = self.load_texture_array(texture_paths)?;
-        let vertices = create_block_vertices(face_config);
+    fn get_vertices(&self, position: Point3<f32>) -> (Vec<model::ModelVertex>, Vec<u32>) {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        let mut vertex_count = 0;
 
-        self.create_model(&vertices, BLOCK_INDICES, texture_array, name)
+        for face in [
+            BlockFace::Front,
+            BlockFace::Back,
+            BlockFace::Right,
+            BlockFace::Left,
+            BlockFace::Top,
+            BlockFace::Bottom,
+        ] {
+            let positions = face.get_position(position);
+            let tex_coords = BlockFace::get_tex_coords();
+            let normal = face.get_normal();
+            let tex_index = self.get_texture_index(face);
+
+            for i in 0..4 {
+                vertices.push(ModelVertex {
+                    position: positions[i].into(),
+                    text_coords: tex_coords[i].into(),
+                    normal: normal.into(),
+                    tex_index,
+                });
+            }
+
+            let base = vertex_count;
+            indices.extend_from_slice(&[base, base + 1, base + 2, base + 2, base + 3, base]);
+            vertex_count += 4;
+        }
+
+        (vertices, indices)
     }
 }

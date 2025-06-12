@@ -2,7 +2,8 @@ mod blocks;
 mod engine;
 
 use anyhow::Ok;
-use cgmath::{Deg, InnerSpace, Vector3};
+use blocks::{Block, BlockFace};
+use cgmath::{Deg, InnerSpace, Point3, Vector3};
 use engine::{
     app::App,
     camera::Camera,
@@ -23,21 +24,29 @@ struct GrassBlock {}
 
 impl Object for GrassBlock {
     fn start(&mut self, ctx: &mut Context) {
+        let texture_array = ctx
+            .load_texture_array(&["grass_block_top.png", "dirt.png", "grass_block_side.png"])
+            .unwrap();
+        let (vertices, indices) = self.get_vertices(Point3::new(0.0, 0.0, 0.0));
         let grass = ctx
-            .create_block(
-                &["grass_block_top.png", "grass_block_side.png", "dirt.png"],
-                &blocks::BlockFaceConfig {
-                    front: 1,
-                    back: 1,
-                    top: 0,
-                    bottom: 2,
-                    right: 1,
-                    left: 1,
-                },
+            .create_model(
+                vertices.as_slice(),
+                indices.as_slice(),
+                texture_array,
                 "grass",
             )
             .unwrap();
         let _ = ctx.spawn_model(&grass);
+    }
+}
+
+impl Block for GrassBlock {
+    fn get_texture_index(&self, face: blocks::BlockFace) -> u32 {
+        match face {
+            BlockFace::Top => 0,
+            BlockFace::Bottom => 1,
+            _ => 2,
+        }
     }
 }
 
