@@ -1,9 +1,11 @@
 mod blocks;
+mod chunk;
 mod engine;
 
 use anyhow::Ok;
 use blocks::{Block, BlockFace};
-use cgmath::{Deg, InnerSpace, Point3, Vector3};
+use cgmath::{Deg, InnerSpace, Vector3};
+use chunk::{Chunk, ChunkPosition};
 use engine::{
     app::App,
     camera::Camera,
@@ -13,32 +15,14 @@ use winit::keyboard::KeyCode;
 
 fn main() -> anyhow::Result<()> {
     App::default()
-        .add_object(GrassBlock::default())
-        .add_object(Camera::new((0.0, 1.0, 2.0), Deg(-90.0), Deg(-20.0)))
+        .add_object(Chunk::new(ChunkPosition::from_world_pos(0.0, 0.0)))
+        .add_object(Camera::new((5.0, 40.0, 25.0), Deg(-90.0), Deg(-20.0)))
         .run()?;
     Ok(())
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone, Copy)]
 struct GrassBlock {}
-
-impl Object for GrassBlock {
-    fn start(&mut self, ctx: &mut Context) {
-        let texture_array = ctx
-            .load_texture_array(&["grass_block_top.png", "dirt.png", "grass_block_side.png"])
-            .unwrap();
-        let (vertices, indices) = self.get_vertices(Point3::new(0.0, 0.0, 0.0));
-        let grass = ctx
-            .create_model(
-                vertices.as_slice(),
-                indices.as_slice(),
-                texture_array,
-                "grass",
-            )
-            .unwrap();
-        let _ = ctx.spawn_model(&grass);
-    }
-}
 
 impl Block for GrassBlock {
     fn get_texture_index(&self, face: blocks::BlockFace) -> u32 {

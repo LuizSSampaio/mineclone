@@ -1,6 +1,10 @@
 use cgmath::{Point2, Point3};
+use enum_dispatch::enum_dispatch;
 
-use crate::engine::model::{self, ModelVertex};
+use crate::{
+    GrassBlock,
+    engine::model::{self, ModelVertex},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum BlockFace {
@@ -79,17 +83,19 @@ impl BlockFace {
     }
 }
 
-pub trait Block {
-    #[allow(unused_variables)]
-    fn get_texture_index(&self, face: BlockFace) -> u32 {
-        0
-    }
+#[enum_dispatch(Block)]
+#[derive(Debug, Clone, Copy)]
+pub enum BlockType {
+    Grass(GrassBlock),
+}
 
-    fn get_vertices(&self, position: Point3<f32>) -> (Vec<model::ModelVertex>, Vec<u32>) {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
-        let mut vertex_count = 0;
-
+impl BlockType {
+    pub fn add_vertices(
+        &self,
+        position: Point3<f32>,
+        vertices: &mut Vec<model::ModelVertex>,
+        indices: &mut Vec<u32>,
+    ) {
         for face in [
             BlockFace::Front,
             BlockFace::Back,
@@ -112,11 +118,16 @@ pub trait Block {
                 });
             }
 
-            let base = vertex_count;
+            let base = vertices.len() as u32;
             indices.extend_from_slice(&[base, base + 1, base + 2, base + 2, base + 3, base]);
-            vertex_count += 4;
         }
+    }
+}
 
-        (vertices, indices)
+#[enum_dispatch]
+pub trait Block {
+    #[allow(unused_variables)]
+    fn get_texture_index(&self, face: BlockFace) -> u32 {
+        0
     }
 }
