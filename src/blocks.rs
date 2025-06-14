@@ -1,10 +1,7 @@
 use cgmath::{Point2, Point3};
 use enum_dispatch::enum_dispatch;
 
-use crate::{
-    GrassBlock,
-    engine::model::{self, ModelVertex},
-};
+use crate::GrassBlock;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BlockFace {
@@ -28,7 +25,7 @@ impl BlockFace {
         }
     }
 
-    pub fn get_position(&self, position: Point3<f32>) -> [Point3<f32>; 4] {
+    pub fn get_vertices(&self, position: Point3<f32>) -> [Point3<f32>; 4] {
         let x = position.x;
         let y = position.y;
         let z = position.z;
@@ -89,45 +86,14 @@ pub enum BlockType {
     Grass(GrassBlock),
 }
 
-impl BlockType {
-    pub fn add_vertices(
-        &self,
-        position: Point3<f32>,
-        vertices: &mut Vec<model::ModelVertex>,
-        indices: &mut Vec<u32>,
-    ) {
-        for face in [
-            BlockFace::Front,
-            BlockFace::Back,
-            BlockFace::Right,
-            BlockFace::Left,
-            BlockFace::Top,
-            BlockFace::Bottom,
-        ] {
-            let positions = face.get_position(position);
-            let tex_coords = BlockFace::get_tex_coords();
-            let normal = face.get_normal();
-            let tex_index = self.get_texture_index(face);
-
-            for i in 0..4 {
-                vertices.push(ModelVertex {
-                    position: positions[i].into(),
-                    text_coords: tex_coords[i].into(),
-                    normal: normal.into(),
-                    tex_index,
-                });
-            }
-
-            let base = vertices.len() as u32;
-            indices.extend_from_slice(&[base, base + 1, base + 2, base + 2, base + 3, base]);
-        }
-    }
-}
-
 #[enum_dispatch]
 pub trait Block {
     #[allow(unused_variables)]
     fn get_texture_index(&self, face: BlockFace) -> u32 {
         0
+    }
+
+    fn is_transparent(&self) -> bool {
+        false
     }
 }

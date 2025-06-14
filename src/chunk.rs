@@ -2,9 +2,9 @@ use cgmath::Point3;
 
 use crate::{
     GrassBlock,
-    blocks::BlockType,
+    blocks::{Block, BlockFace, BlockType},
     engine::{
-        model::Model,
+        model::{Model, ModelVertex},
         object::{Context, Object},
     },
 };
@@ -85,7 +85,42 @@ impl Chunk {
                         (self.position.z * CHUNK_SIZE as i32 + z as i32) as f32,
                     );
 
-                    block.add_vertices(world_pos, &mut vertices, &mut indices);
+                    for face in [
+                        BlockFace::Front,
+                        BlockFace::Back,
+                        BlockFace::Left,
+                        BlockFace::Right,
+                        BlockFace::Top,
+                        BlockFace::Bottom,
+                    ] {
+                        if self.should_hide_face(x, y, z, face) {
+                            continue;
+                        }
+
+                        let face_vertices = face.get_vertices(world_pos);
+                        let tex_coords = BlockFace::get_tex_coords();
+                        let normal = face.get_normal();
+                        let tex_index = block.get_texture_index(face);
+
+                        for i in 0..4 {
+                            vertices.push(ModelVertex {
+                                position: face_vertices[i].into(),
+                                text_coords: tex_coords[i].into(),
+                                normal: normal.into(),
+                                tex_index,
+                            });
+                        }
+
+                        let base = vertices.len() as u32;
+                        indices.extend_from_slice(&[
+                            base,
+                            base + 1,
+                            base + 2,
+                            base + 2,
+                            base + 3,
+                            base,
+                        ]);
+                    }
                 }
             }
         }
@@ -103,6 +138,30 @@ impl Chunk {
             )
             .unwrap(),
         );
+    }
+
+    fn should_hide_face(&self, x: usize, y: usize, z: usize, face: BlockFace) -> bool {
+        let (nx, ny, nz) = match face {
+            BlockFace::Front => (x as i32, y as i32, z as i32 + 1),
+            BlockFace::Back => (x as i32, y as i32, z as i32 - 1),
+            BlockFace::Left => (x as i32 - 1, y as i32, z as i32),
+            BlockFace::Right => (x as i32 + 1, y as i32, z as i32),
+            BlockFace::Top => (x as i32, y as i32 + 1, z as i32),
+            BlockFace::Bottom => (x as i32, y as i32 - 1, z as i32),
+        };
+
+        if nx >= 0
+            && nx < CHUNK_SIZE as i32
+            && ny >= 0
+            && ny < CHUNK_HEIGHT as i32
+            && nz >= 0
+            && nz < CHUNK_SIZE as i32
+        {
+            let neighbor = &self.blocks[nx as usize][ny as usize][nz as usize];
+            !neighbor.is_transparent()
+        } else {
+            false
+        }
     }
 }
 
