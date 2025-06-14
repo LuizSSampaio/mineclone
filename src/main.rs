@@ -2,6 +2,8 @@ mod blocks;
 mod chunk;
 mod engine;
 
+use std::time::Instant;
+
 use anyhow::Ok;
 use blocks::{Block, BlockFace};
 use cgmath::{Deg, InnerSpace, Vector3};
@@ -17,6 +19,7 @@ fn main() -> anyhow::Result<()> {
     App::default()
         .add_object(Chunk::new(ChunkPosition::from_world_pos(0.0, 0.0)))
         .add_object(Camera::new((5.0, 40.0, 25.0), Deg(-90.0), Deg(-20.0)))
+        .add_object(FPSCounter::default())
         .run()?;
     Ok(())
 }
@@ -66,5 +69,35 @@ impl Object for Camera {
 
         ctx.update_camera(self);
         ctx.input.reset_mouse_delta();
+    }
+}
+
+struct FPSCounter {
+    last_update: Instant,
+    frame_cout: u32,
+}
+
+impl Default for FPSCounter {
+    fn default() -> Self {
+        Self {
+            last_update: Instant::now(),
+            frame_cout: 0,
+        }
+    }
+}
+
+impl Object for FPSCounter {
+    #[allow(unused_variables)]
+    fn update(&mut self, ctx: &mut Context, delta: f32) {
+        self.frame_cout += 1;
+        let now = Instant::now();
+        if now.duration_since(self.last_update).as_secs_f32() >= 1.0 {
+            println!(
+                "FPS: {:.1}",
+                self.frame_cout as f32 / now.duration_since(self.last_update).as_secs_f32()
+            );
+            self.frame_cout = 0;
+            self.last_update = now;
+        }
     }
 }
