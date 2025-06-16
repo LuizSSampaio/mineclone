@@ -29,16 +29,20 @@ impl World {
     }
 
     pub fn load_chunk(&mut self, position: ChunkPosition, ctx: &mut Context) {
-        self.chunks.entry(position).or_insert_with(|| {
-            let mut chunk = Chunk::new(position);
-            chunk.generate_terrain();
-            chunk.build_mesh(ctx);
-            if let Some(mesh) = chunk.mesh.as_ref() {
-                ctx.spawn_model(mesh);
-            }
-            chunk.need_rebuilt = false;
-            chunk
-        });
+        if self.chunks.contains_key(&position) {
+            return;
+        }
+
+        let mut chunk = Chunk::new(position);
+        chunk.generate_terrain();
+        chunk.build_mesh(self, ctx);
+        if let Some(mesh) = chunk.mesh.as_ref() {
+            ctx.spawn_model(mesh);
+        }
+        chunk.need_rebuilt = false;
+
+        self.chunks.insert(position, chunk);
+        self.mark_neighbors_for_rebuild(&position);
     }
 
     pub fn unload_chunk(&mut self, position: ChunkPosition, ctx: &mut Context) {
@@ -48,16 +52,32 @@ impl World {
             }
 
             self.chunks.remove(&position);
+            self.mark_neighbors_for_rebuild(&position);
         }
     }
 
-    pub fn update_chunks_around_player(&mut self, player_pos: Point3<f32>, ctx: &mut Context) {
+    fn mark_neighbors_for_rebuild(&mut self, position: &ChunkPosition) {
+        let neighbors = [
+            ChunkPosition::new(position.x - 1, position.z),
+            ChunkPosition::new(position.x + 1, position.z),
+            ChunkPosition::new(position.x, position.z - 1),
+            ChunkPosition::new(position.x, position.z + 1),
+        ];
+
+        for neighbor_pos in &neighbors {
+            if let Some(neighbor_chunk) = self.chunks.get_mut(neighbor_pos) {
+                neighbor_chunk.need_rebuilt = true;
+            }
+        }
+    }
+
+    fn update_chunks_around_player(&mut self, player_pos: Point3<f32>, ctx: &mut Context) {
         let player_chunk = ChunkPosition::from_world_pos(player_pos.x, player_pos.z);
 
         for x in (player_chunk.x - self.render_distance as i32)
-            ..(player_chunk.z + self.render_distance as i32)
+            ..(player_chunk.x + self.render_distance as i32)
         {
-            for z in (player_chunk.x - self.render_distance as i32)
+            for z in (player_chunk.z - self.render_distance as i32)
                 ..(player_chunk.z + self.render_distance as i32)
             {
                 self.load_chunk(ChunkPosition::new(x, z), ctx);
@@ -81,16 +101,28 @@ impl World {
     }
 
     pub fn rebuild_chunk_meshes(&mut self, ctx: &mut Context) {
-        for chunk in self.chunks.values_mut() {
-            if chunk.need_rebuilt {
+        let chunks_to_rebuild: Vec<ChunkPosition> = self
+            .chunks
+            .iter()
+            .filter(|(_, chunk)| chunk.need_rebuilt)
+            .map(|(pos, _)| *pos)
+            .collect();
+
+        for pos in chunks_to_rebuild {
+            if let Some(chunk) = self.chunks.get_mut(&pos) {
                 if let Some(old_mesh) = chunk.mesh.as_ref() {
                     ctx.despawn_model(old_mesh);
                 }
-                chunk.build_mesh(ctx);
+            }
+
+            if let Some(mut chunk) = self.chunks.remove(&pos) {
+                chunk.build_mesh(self, ctx);
                 if let Some(new_mesh) = chunk.mesh.as_ref() {
                     ctx.spawn_model(new_mesh);
                 }
                 chunk.need_rebuilt = false;
+
+                self.chunks.insert(pos, chunk);
             }
         }
     }
@@ -100,6 +132,6 @@ impl Object for World {
     #![allow(unused_variables)]
     fn update(&mut self, ctx: &mut Context, delta: f32) {
         self.update_chunks_around_player(Point3::new(0.0, 0.0, 0.0), ctx);
-        // self.rebuild_chunk_meshes(ctx);
+        self.rebuild_chunk_meshes(ctx);
     }
 }
