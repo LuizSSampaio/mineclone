@@ -83,6 +83,7 @@ impl BlockFace {
 #[enum_dispatch(Block)]
 #[derive(Debug, Clone, Copy)]
 pub enum BlockType {
+    Air(AirBlock),
     Grass(GrassBlock),
 }
 
@@ -95,5 +96,14 @@ pub trait Block {
 
     fn is_transparent(&self) -> bool {
         false
+    }
+}
+
+#[derive(Default, Debug, Clone, Copy)]
+pub struct AirBlock {}
+
+impl Block for AirBlock {
+    fn is_transparent(&self) -> bool {
+        true
     }
 }
