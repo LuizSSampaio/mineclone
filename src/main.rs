@@ -1,23 +1,24 @@
 mod blocks;
 mod chunk;
 mod engine;
+mod world;
 
 use std::time::Instant;
 
 use anyhow::Ok;
 use blocks::{Block, BlockFace};
 use cgmath::{Deg, InnerSpace, Vector3};
-use chunk::{Chunk, ChunkPosition};
 use engine::{
     app::App,
     camera::Camera,
     object::{Context, Object},
 };
 use winit::keyboard::KeyCode;
+use world::World;
 
 fn main() -> anyhow::Result<()> {
     App::default()
-        .add_object(Chunk::new(ChunkPosition::from_world_pos(0.0, 0.0)))
+        .add_object(World::new(2))
         .add_object(Camera::new((5.0, 40.0, 25.0), Deg(-90.0), Deg(-20.0)))
         .add_object(FPSCounter::default())
         .run()?;

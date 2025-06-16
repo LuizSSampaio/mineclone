@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Ok;
 use winit::window::Window;
 
 use super::{camera::Camera, input::Input, model, renderer::RendererState};
@@ -12,10 +11,12 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn spawn_model(&mut self, model: &model::Model) -> anyhow::Result<()> {
-        self.renderer_state.models.push(model.to_owned());
+    pub fn spawn_model(&mut self, model: &model::Model) {
+        self.renderer_state.models.insert(model.to_owned());
+    }
 
-        Ok(())
+    pub fn despawn_model(&mut self, model: &model::Model) {
+        self.renderer_state.models.remove(model);
     }
 
     pub fn update_camera(&mut self, camera: &Camera) {

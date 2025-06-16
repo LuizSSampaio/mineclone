@@ -2,7 +2,7 @@ use cgmath::Point3;
 
 use crate::{
     GrassBlock,
-    blocks::{Block, BlockFace, BlockType},
+    blocks::{AirBlock, Block, BlockFace, BlockType},
     engine::{
         model::{Model, ModelVertex},
         object::{Context, Object},
@@ -42,8 +42,7 @@ impl Chunk {
     pub fn new(position: ChunkPosition) -> Self {
         Self {
             position,
-            blocks: [[[BlockType::Grass(GrassBlock::default()); CHUNK_SIZE]; CHUNK_HEIGHT];
-                CHUNK_SIZE],
+            blocks: [[[BlockType::Air(AirBlock::default()); CHUNK_SIZE]; CHUNK_HEIGHT]; CHUNK_SIZE],
             mesh: None,
             need_rebuilt: true,
         }
@@ -65,8 +64,17 @@ impl Chunk {
     }
 
     pub fn generate_terrain(&mut self) {
-        self.blocks =
-            [[[BlockType::Grass(GrassBlock::default()); CHUNK_SIZE]; CHUNK_HEIGHT]; CHUNK_SIZE];
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_HEIGHT {
+                for z in 0..CHUNK_SIZE {
+                    if y <= 40 {
+                        self.blocks[x][y][z] = BlockType::Grass(GrassBlock::default());
+                    } else {
+                        self.blocks[x][y][z] = BlockType::Air(AirBlock::default());
+                    }
+                }
+            }
+        }
         self.need_rebuilt = true;
     }
 
@@ -161,17 +169,6 @@ impl Chunk {
             !neighbor.is_transparent()
         } else {
             false
-        }
-    }
-}
-
-impl Object for Chunk {
-    #[allow(unused_variables)]
-    fn update(&mut self, ctx: &mut Context, delta: f32) {
-        if self.need_rebuilt {
-            self.build_mesh(ctx);
-            let _ = ctx.spawn_model(self.mesh.as_ref().unwrap());
-            self.need_rebuilt = false;
         }
     }
 }

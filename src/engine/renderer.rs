@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use wgpu::{
     Adapter, BindGroup, BindGroupLayout, Buffer, Device, Instance, Queue, RenderPipeline,
@@ -29,7 +29,7 @@ pub struct RendererState {
     pub diffuse_bind_group_layout: wgpu::BindGroupLayout,
     deth_texture: texture::Texture,
 
-    pub models: Vec<model::Model>,
+    pub models: HashSet<model::Model>,
 }
 
 impl RendererState {
@@ -77,7 +77,7 @@ impl RendererState {
             camera_bind_group,
             diffuse_bind_group_layout,
             deth_texture,
-            models: vec![],
+            models: HashSet::new(),
         }
     }
 

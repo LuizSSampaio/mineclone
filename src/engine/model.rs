@@ -46,12 +46,12 @@ impl Vertex for ModelVertex {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Material {
     pub(in crate::engine) bind_group: wgpu::BindGroup,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Mesh {
     pub(in crate::engine) vertex_buffer: wgpu::Buffer,
     pub(in crate::engine) index_buffer: wgpu::Buffer,
@@ -59,7 +59,7 @@ pub struct Mesh {
     pub material: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Model {
     pub meshes: Vec<Mesh>,
     pub materials: Vec<Material>,
