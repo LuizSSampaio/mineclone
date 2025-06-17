@@ -131,7 +131,7 @@ impl World {
 impl Object for World {
     #![allow(unused_variables)]
     fn update(&mut self, ctx: &mut Context, delta: f32) {
-        self.update_chunks_around_player(Point3::new(0.0, 0.0, 0.0), ctx);
+        self.update_chunks_around_player(ctx.renderer_state.camera.position, ctx);
         self.rebuild_chunk_meshes(ctx);
     }
 }

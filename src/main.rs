@@ -2,6 +2,7 @@ mod blocks;
 mod chunk;
 mod engine;
 mod world;
+mod world_gen;
 
 use std::time::Instant;
 
@@ -18,7 +19,7 @@ use world::World;
 
 fn main() -> anyhow::Result<()> {
     App::default()
-        .add_object(World::new(2))
+        .add_object(World::new(12))
         .add_object(Camera::new((5.0, 40.0, 25.0), Deg(-90.0), Deg(-20.0)))
         .add_object(FPSCounter::default())
         .run()?;

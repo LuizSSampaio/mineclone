@@ -5,7 +5,7 @@ use winit::window::Window;
 use super::{camera::Camera, input::Input, model, renderer::RendererState};
 
 pub struct Context<'a> {
-    pub(in crate::engine) renderer_state: &'a mut RendererState,
+    pub renderer_state: &'a mut RendererState,
     pub(in crate::engine) window: &'a mut Arc<Window>,
     pub input: &'a mut Input,
 }
