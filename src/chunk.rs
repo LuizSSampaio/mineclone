@@ -1,7 +1,6 @@
 use cgmath::Point3;
 
 use crate::{
-    GrassBlock,
     blocks::{AirBlock, Block, BlockFace, BlockType},
     engine::{
         model::{Model, ModelVertex},
@@ -62,21 +61,6 @@ impl Chunk {
             self.blocks[x][y][z] = block;
             self.need_rebuilt = true;
         }
-    }
-
-    pub fn generate_terrain(&mut self) {
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_HEIGHT {
-                for z in 0..CHUNK_SIZE {
-                    if y <= 40 {
-                        self.blocks[x][y][z] = BlockType::Grass(GrassBlock::default());
-                    } else {
-                        self.blocks[x][y][z] = BlockType::Air(AirBlock::default());
-                    }
-                }
-            }
-        }
-        self.need_rebuilt = true;
     }
 
     pub fn build_mesh(&mut self, world: &World, ctx: &mut Context) {

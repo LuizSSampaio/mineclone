@@ -1,22 +1,28 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use cgmath::Point3;
 
 use crate::{
     chunk::{Chunk, ChunkPosition},
     engine::object::{Context, Object},
+    world_gen::WorldGenerator,
 };
 
 pub struct World {
     chunks: HashMap<ChunkPosition, Chunk>,
     pub render_distance: u32,
+
+    generator: Arc<WorldGenerator>,
 }
 
 impl World {
     pub fn new(render_distance: u32) -> Self {
+        let seed = rand::random();
+
         Self {
             chunks: HashMap::new(),
             render_distance,
+            generator: Arc::new(WorldGenerator::new(seed)),
         }
     }
 
@@ -34,7 +40,7 @@ impl World {
         }
 
         let mut chunk = Chunk::new(position);
-        chunk.generate_terrain();
+        self.generator.generate_chunk(&mut chunk);
         chunk.build_mesh(self, ctx);
         if let Some(mesh) = chunk.mesh.as_ref() {
             ctx.spawn_model(mesh);
