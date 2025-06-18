@@ -1,6 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use cgmath::Point3;
+use crossbeam::channel::{Receiver, Sender};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     chunk::{Chunk, ChunkPosition},
@@ -8,21 +13,50 @@ use crate::{
     world_gen::WorldGenerator,
 };
 
+struct GenJob {
+    position: ChunkPosition,
+}
+
 pub struct World {
     chunks: HashMap<ChunkPosition, Chunk>,
-    pub render_distance: u32,
+    in_flight: HashSet<ChunkPosition>,
+    job_tx: Sender<GenJob>,
+    result_rx: Receiver<Chunk>,
 
-    generator: Arc<WorldGenerator>,
+    pub render_distance: u32,
+    last_player_chunk: Option<ChunkPosition>,
 }
 
 impl World {
     pub fn new(render_distance: u32) -> Self {
-        let seed = rand::random();
+        let (job_tx, job_rx) = crossbeam::channel::unbounded::<GenJob>();
+        let (result_tx, result_rx) = crossbeam::channel::unbounded::<Chunk>();
+        let generator = Arc::new(WorldGenerator::new(rand::random()));
+
+        rayon::spawn({
+            let generator = Arc::clone(&generator);
+            move || {
+                while let Ok(first_job) = job_rx.recv() {
+                    let mut jobs = vec![first_job];
+                    jobs.extend(job_rx.try_iter());
+
+                    jobs.into_par_iter().for_each(|job| {
+                        let mut chunk = Chunk::new(job.position);
+                        generator.generate_chunk(&mut chunk);
+
+                        result_tx.send(chunk).unwrap();
+                    });
+                }
+            }
+        });
 
         Self {
             chunks: HashMap::new(),
+            in_flight: HashSet::new(),
+            job_tx,
+            result_rx,
             render_distance,
-            generator: Arc::new(WorldGenerator::new(seed)),
+            last_player_chunk: None,
         }
     }
 
@@ -34,22 +68,13 @@ impl World {
         self.chunks.get_mut(position)
     }
 
-    pub fn load_chunk(&mut self, position: ChunkPosition, ctx: &mut Context) {
-        if self.chunks.contains_key(&position) {
+    pub fn load_chunk(&mut self, position: ChunkPosition) {
+        if self.chunks.contains_key(&position) || self.in_flight.contains(&position) {
             return;
         }
 
-        let mut chunk = Chunk::new(position);
-        self.generator.generate_chunk(&mut chunk);
-        let data = chunk.build_mesh(self);
-        chunk.upload_mesh(data, ctx);
-        if let Some(mesh) = chunk.mesh.as_ref() {
-            ctx.spawn_model(mesh);
-        }
-        chunk.need_rebuilt = false;
-
-        self.chunks.insert(position, chunk);
-        self.mark_neighbors_for_rebuild(&position);
+        self.job_tx.send(GenJob { position }).unwrap();
+        self.in_flight.insert(position);
     }
 
     pub fn unload_chunk(&mut self, position: ChunkPosition, ctx: &mut Context) {
@@ -81,29 +106,54 @@ impl World {
     fn update_chunks_around_player(&mut self, player_pos: Point3<f32>, ctx: &mut Context) {
         let player_chunk = ChunkPosition::from_world_pos(player_pos.x, player_pos.z);
 
-        for x in (player_chunk.x - self.render_distance as i32)
-            ..(player_chunk.x + self.render_distance as i32)
-        {
-            for z in (player_chunk.z - self.render_distance as i32)
-                ..(player_chunk.z + self.render_distance as i32)
-            {
-                self.load_chunk(ChunkPosition::new(x, z), ctx);
+        if self.last_player_chunk == Some(player_chunk) {
+            return;
+        }
+        self.last_player_chunk = Some(player_chunk);
+
+        let mut should_be_loaded = HashSet::new();
+        let rd = self.render_distance as i32;
+
+        for dx in -rd..=rd {
+            for dz in -rd..=rd {
+                if dx * dx + dz * dz <= rd * rd {
+                    should_be_loaded
+                        .insert(ChunkPosition::new(player_chunk.x + dx, player_chunk.z + dz));
+                }
+            }
+        }
+
+        for pos in &should_be_loaded {
+            if !self.chunks.contains_key(pos) || !self.in_flight.contains(pos) {
+                self.load_chunk(*pos);
             }
         }
 
         let chunks_to_unload: Vec<ChunkPosition> = self
             .chunks
             .keys()
-            .filter(|pos| {
-                let dx = (pos.x - player_chunk.x).abs();
-                let dz = (pos.z - player_chunk.z).abs();
-                dx > self.render_distance as i32 || dz > self.render_distance as i32
-            })
+            .filter(|pos| !should_be_loaded.contains(pos))
             .cloned()
             .collect();
 
         for pos in chunks_to_unload {
             self.unload_chunk(pos, ctx);
+        }
+    }
+
+    fn flush_generated_chunks(&mut self, ctx: &mut Context) {
+        let drained: Vec<Chunk> = self.result_rx.try_iter().collect();
+
+        for mut chunk in drained {
+            let data = chunk.build_mesh(self);
+            chunk.upload_mesh(data, ctx);
+
+            ctx.spawn_model(chunk.mesh.as_ref().unwrap());
+
+            self.mark_neighbors_for_rebuild(&chunk.position);
+
+            self.in_flight.remove(&chunk.position);
+            self.chunks.insert(chunk.position, chunk);
         }
     }
 
@@ -139,6 +189,7 @@ impl World {
 impl Object for World {
     #![allow(unused_variables)]
     fn update(&mut self, ctx: &mut Context, delta: f32) {
+        self.flush_generated_chunks(ctx);
         self.update_chunks_around_player(ctx.get_camera_position(), ctx);
         self.rebuild_chunk_meshes(ctx);
     }
