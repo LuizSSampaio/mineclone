@@ -25,7 +25,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn get_camera_position(&mut self) -> Point3<f32> {
-        self.renderer_state.camera.position.clone()
+        self.renderer_state.camera.position
     }
 }
 

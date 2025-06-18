@@ -41,7 +41,8 @@ impl World {
 
         let mut chunk = Chunk::new(position);
         self.generator.generate_chunk(&mut chunk);
-        chunk.build_mesh(self, ctx);
+        let data = chunk.build_mesh(self);
+        chunk.upload_mesh(data, ctx);
         if let Some(mesh) = chunk.mesh.as_ref() {
             ctx.spawn_model(mesh);
         }
@@ -122,7 +123,8 @@ impl World {
             }
 
             if let Some(mut chunk) = self.chunks.remove(&pos) {
-                chunk.build_mesh(self, ctx);
+                let data = chunk.build_mesh(self);
+                chunk.upload_mesh(data, ctx);
                 if let Some(new_mesh) = chunk.mesh.as_ref() {
                     ctx.spawn_model(new_mesh);
                 }

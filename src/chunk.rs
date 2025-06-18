@@ -31,6 +31,11 @@ impl ChunkPosition {
     }
 }
 
+pub struct MeshData {
+    pub vertices: Vec<ModelVertex>,
+    pub indices: Vec<u32>,
+}
+
 pub struct Chunk {
     pub position: ChunkPosition,
     pub blocks: [[[BlockType; CHUNK_SIZE]; CHUNK_HEIGHT]; CHUNK_SIZE],
@@ -63,73 +68,94 @@ impl Chunk {
         }
     }
 
-    pub fn build_mesh(&mut self, world: &World, ctx: &mut Context) {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
+    pub fn build_mesh(&self, world: &World) -> MeshData {
+        use rayon::prelude::*;
 
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_HEIGHT {
-                for z in 0..CHUNK_SIZE {
-                    let block = &self.blocks[x][y][z];
+        let results: Vec<(Vec<ModelVertex>, Vec<u32>)> = (0..CHUNK_SIZE)
+            .into_par_iter()
+            .map(|x| {
+                let mut local_vertices = Vec::new();
+                let mut local_indices = Vec::new();
 
-                    if matches!(block, BlockType::Air(_)) {
-                        continue;
-                    }
+                for y in 0..CHUNK_HEIGHT {
+                    for z in 0..CHUNK_SIZE {
+                        let block = &self.blocks[x][y][z];
 
-                    let world_pos = Point3::new(
-                        (self.position.x * CHUNK_SIZE as i32 + x as i32) as f32,
-                        y as f32,
-                        (self.position.z * CHUNK_SIZE as i32 + z as i32) as f32,
-                    );
-
-                    for face in [
-                        BlockFace::Front,
-                        BlockFace::Back,
-                        BlockFace::Left,
-                        BlockFace::Right,
-                        BlockFace::Top,
-                        BlockFace::Bottom,
-                    ] {
-                        if self.should_hide_face(x, y, z, face, world) {
+                        if matches!(block, BlockType::Air(_)) {
                             continue;
                         }
 
-                        let face_vertices = face.get_vertices(world_pos);
-                        let tex_coords = BlockFace::get_tex_coords();
-                        let normal = face.get_normal();
-                        let tex_index = block.get_texture_index(face);
+                        let world_pos = Point3::new(
+                            (self.position.x * CHUNK_SIZE as i32 + x as i32) as f32,
+                            y as f32,
+                            (self.position.z * CHUNK_SIZE as i32 + z as i32) as f32,
+                        );
 
-                        for i in 0..4 {
-                            vertices.push(ModelVertex {
-                                position: face_vertices[i].into(),
-                                text_coords: tex_coords[i].into(),
-                                normal: normal.into(),
-                                tex_index,
-                            });
+                        for face in [
+                            BlockFace::Front,
+                            BlockFace::Back,
+                            BlockFace::Left,
+                            BlockFace::Right,
+                            BlockFace::Top,
+                            BlockFace::Bottom,
+                        ] {
+                            if self.should_hide_face(x, y, z, face, world) {
+                                continue;
+                            }
+
+                            let face_vertices = face.get_vertices(world_pos);
+                            let tex_coords = BlockFace::get_tex_coords();
+                            let normal = face.get_normal();
+                            let tex_index = block.get_texture_index(face);
+
+                            let base = local_vertices.len() as u32;
+                            for i in 0..4 {
+                                local_vertices.push(ModelVertex {
+                                    position: face_vertices[i].into(),
+                                    text_coords: tex_coords[i].into(),
+                                    normal: normal.into(),
+                                    tex_index,
+                                });
+                            }
+
+                            local_indices.extend_from_slice(&[
+                                base,
+                                base + 1,
+                                base + 2,
+                                base + 2,
+                                base + 3,
+                                base,
+                            ]);
                         }
-
-                        let base = vertices.len() as u32;
-                        indices.extend_from_slice(&[
-                            base,
-                            base + 1,
-                            base + 2,
-                            base + 2,
-                            base + 3,
-                            base,
-                        ]);
                     }
                 }
-            }
+
+                (local_vertices, local_indices)
+            })
+            .collect();
+
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+
+        for (mut local_vertices, local_indices) in results {
+            let base_index = vertices.len() as u32;
+            vertices.append(&mut local_vertices);
+
+            indices.extend(local_indices.iter().map(|&i| i + base_index));
         }
 
+        MeshData { vertices, indices }
+    }
+
+    pub fn upload_mesh(&mut self, data: MeshData, ctx: &mut Context) {
         let texture_array = ctx
             .load_texture_array(&["grass_block_top.png", "dirt.png", "grass_block_side.png"])
             .unwrap();
 
         self.mesh = Some(
             ctx.create_model(
-                vertices.as_slice(),
-                indices.as_slice(),
+                data.vertices.as_slice(),
+                data.indices.as_slice(),
                 texture_array,
                 &format!("Chunk({}-{})", self.position.x, self.position.z),
             )
