@@ -6,9 +6,9 @@ Yet another minecraft clone written in rust using wgpu.
 
 - [ ]  Renderer
     - [x]  Block
-    - [ ]  Face Culling
+    - [x]  Face Culling
     - [ ]  Multiple blocks instances
 
 
-- [ ]  Chunk System
-- [ ]  Random World Generation
+- [x]  Chunk System
+- [x]  Random World Generation
