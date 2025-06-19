@@ -56,7 +56,7 @@ impl RendererState {
 
         let camera = camera::Camera::new((0.0, 1.0, 2.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection =
-            camera::Projection::new(config.width, config.height, cgmath::Deg(45.0), 0.1, 100.0);
+            camera::Projection::new(config.width, config.height, cgmath::Deg(45.0), 0.1, 1000.0);
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera, &projection);
         let camera_buffer = Self::create_camera_buffer(&device, &camera_uniform);
